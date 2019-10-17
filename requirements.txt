@@ -1,0 +1,68 @@
+
+* implement a memory allocator for the heap of a user-level process
+
+* Malloc
+functions similar to traditional malloc, but free can free memory from any point in
+the allocated memory implementations of Mem_Alloc (int size) and Mem_Free (void *ptr) are identical,
+except the pointer passed to Mem_Free does not have to have been previously returned by Mem_Alloc;
+
+instead, ptr can point to any valid range of memory returned by Mem_Alloc.
+Will need to have a more sophisticated data structure than the traditional malloc to track the
+regions of memory allocated by Mem_Alloc.
+Specifically, this data structure will allow you to efficiently map any address to the
+corresponding memory object or to determine that there is no corresponding object.
+
+
+We now define each of these routines more precisely.
+
+int Mem_Init(int sizeOfRegion): Mem_Init is called one time by a process using your routines. sizeOfRegion is the number of bytes that you should request from the OS using mmap. Note that you may need to round up this amount so that you request memory in units of the page size (see the man pages for getpagesize()). Note that you need to use this allocated memory for your own data structures as well; that is, your infrastructure for tracking the mapping from addresses to memory objects has to be placed in this region as well. If you call malloc(), or any other related function, in any of your routines, we will deduct a significant number of points (e.g., 15 points). Similarly, you should not allocate global arrays! However, you may allocate a few global variables (e.g., a pointer to the head of your free list.)
+
+void *Mem_Alloc(int size): Mem_Alloc() is similar to the library function malloc(). Mem_Alloc takes as input the size in bytes of the object to be allocated and returns a pointer to the start of that object. The function returns NULL if there is not enough free space within sizeOfRegion allocated by Mem_Init to satisfy this request.
+
+int Mem_Free(void *ptr): Mem_Free frees the memory object that ptr falls within, according to the rules described above. Just like with the standard free(), if ptr is NULL, then no operation is performed. The function returns 0 on success and -1 if ptr to does not fall within a currently allocated object (note that this includes the case where the object was already freed with Mem_Free).
+
+int Mem_IsValid(void *ptr): This function returns 1 if ptr falls within a currently allocated object and 0 if it does not. You may find this function useful when debugging your memory allocator.
+
+int Mem_GetSize(void *ptr): If ptr falls within the range of a currently allocated object, then this function returns the size in bytes of that object; otherwise, the function returns -1. You may find this function useful when debugging your memory allocator.
+
+
+// open the /dev/zero device
+int fd = open("/dev/zero", O_RDWR);
+
+// size (in bytes) needs to be evenly divisible by the page size
+void *ptr = mmap(NULL, sizeOfRegion, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+if (ptr == MAP_FAILED) {
+    perror("mmap");
+    return -1;
+}
+
+// close the device (don't worry, mapping should be unaffected)
+close(fd);
+return 0;
+
+
+
+free calls
+
+fails = inside an int as in 3 byte call = invalid
+= on boundary of int == double free
+= on mid boundary at 5th byte = seg fault
+
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(){
+  int ar[3] = { 1, 2, 3 };
+  char *c;
+  for (size_t i = 0; i < 3; i++) {
+    printf("%d\n", ar[i]);
+  }
+
+  c = ar;
+  free(c+3);
+
+  for (size_t i = 0; i < 3; i++) {
+    printf("%d\n", ar[i]);
+  }
+  return 0;
+}
